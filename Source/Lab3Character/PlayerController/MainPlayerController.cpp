@@ -101,6 +101,7 @@ void AMainPlayerController::InteractPressed()
 		// Performs a hit trace under the cursor to detect interactable objects in the world.
 		FHitResult TraceResult;
 		//CALL GetHitResultUnderCursorByChannel() passing in UEngineTypes::ConvertToTraceType(ECC_WorldDynamic), false, TraceResult
+		GetHitResultUnderCursorByChannel(UEngineTypes::ConvertToTraceType(ECC_WorldDynamic), false, TraceResult);
 		
 
 		// Calls the Interact function on the character, passing in the actor that was hit by the trace, if any.

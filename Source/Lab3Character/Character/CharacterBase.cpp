@@ -112,7 +112,6 @@ void ACharacterBase::BeginPlay()
 	this->OnTakeAnyDamage.AddDynamic(this,
 		&ACharacterBase::OnTakeDamage);
 
-
 }
 
 
@@ -410,11 +409,13 @@ void ACharacterBase::HoldWeapon(AWeaponBase* Weapon)
     //CALL Attach() on the CurrentWeapon and pass in this
 	CurrentWeapon->Attach(this);
 
-    //CALL Clear() on the CurrentWeapon's OnWeaponFired event
+	//CALL Clear() on the CurrentWeapon's OnWeaponFired event
+	CurrentWeapon->OnWeaponFired.Clear();
 
-    
 	/* Subscribe to weapon's events.*/
-    //SUBSCRIBE to the CurrentWeapon's OnWeaponFired and pass in (this, &ACharacterBase::OnWeaponFired)
+	//SUBSCRIBE to the CurrentWeapon's OnWeaponFired and pass in (this, &ACharacterBase::OnWeaponFired)
+	
+	CurrentWeapon->OnWeaponFired.AddDynamic(this, &ACharacterBase::OnWeaponFired);
 	
 }
 /*
@@ -423,23 +424,26 @@ DropWeapon() will detach the Weapon Currently held by the character
 void ACharacterBase::DropWeapon()
 {
 	//TODO Lab3 ACharacterBase::DropWeapon(...):
-    //IF CurrentWeapon is not null
+    if(CurrentWeapon!= nullptr)
 	
 	{
 		/* Unsubscribe from weapon's events.*/
         //CALL RemoveDynamic(this, &ACharacterBase::OnWeaponFired) on the CurrentWeapon's OnWeaponFired event
-	
+		CurrentWeapon->OnWeaponFired.RemoveDynamic(this, &ACharacterBase::OnWeaponFired);
 
 		/* Detach weapon from the character.*/
         //CALL Detach() on the CurrentWeapon()
+		CurrentWeapon->Detach();
 	
         //SET CurrentWeapon to null
-	
+		CurrentWeapon = nullptr;
 
 		/* Reset weapon states states.*/
         //SET bIsFiring to false
+		bIsFiring = false;
 	
         //SET bIsAiming to false
+		bIsAiming = false;
 	
 	}
     //ENDIF
@@ -456,17 +460,20 @@ void ACharacterBase::OnWeaponFired()
 	//TODO Lab3 ACharacterBase::OnWeaponFired():
     /* Play recoil animation depending on the stance.*/
     //IF bIsAiming is true
+	if (bIsAiming)
 	
 	{
         /*Play the Fire Aim Animation*/
         //CALL Montage_Play(FireAimAnimation) on the AnimationInstance
+		AnimationInstance->Montage_Play(FireAimAnimation);
 	
 	}
     //ELSE
-	//else
+	else
 	{
         /*Play the Fire Hip Animation*/
         //CALL Montage_Play(FireHipAnimation) on the AnimationInstance
+		AnimationInstance->Montage_Play(FireHipAnimation);
 		
 	}
     //ENDIF
@@ -479,31 +486,35 @@ OnDeath() is a callback function that is triggered by the Health Component. Here
 void ACharacterBase::OnDeath()
 {
 //	check(Health->IsDead() && "Called OnDeath() while alive!");
+	
 
 //TODO Lab3 ACharacterBase::OnDeath():
 	/* Stop ticking while dead.*/
     //SET PrimaryActorTick.bCanEverTick to false
+	PrimaryActorTick.bCanEverTick = false;
 	
 
 	/* Drop held weapon.*/
     //CALL DropWeapon
+	DropWeapon();
 	
 
 	/* Disable character's capsule collision.*/
 	
-
 	// Uncomment this code if you want to Allow character's ragdoll to be pushed around. 
 	
-    /*
+    
 	SkeletalMesh->SetCollisionProfileName(TEXT("BlockAll"));
 	SkeletalMesh->CanCharacterStepUpOn = ECB_No;
 	SkeletalMesh->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
-	*/
+	
 
 	/* Simulate character's ragdoll.*/
     //CALL SetCollisionEnabled() on the SkeletalMesh and pass in ECollisionEnabled::QueryAndPhysics
+	SkeletalMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	
     //CALL SetSimulatePhysics() on the SkeletalMesh and pass in true
+	SkeletalMesh->SetSimulatePhysics(true);
 	
 }
 
@@ -515,7 +526,9 @@ void ACharacterBase::OnTakeDamage(AActor* DamagedActor, float Damage, const UDam
 	 remains within the valid range between 0 and the maximum health. This prevents the health from going below 0 or above the maximum health,
 	 which would be nonsensical in the context of a game.*/
 	//SET CurrentHealth, Clamp it to X: CurrentHealth - Damage, Min: 0.0f, Max: MaximumHealth using FMath::Clamp()
-	
+
+	CurrentHealth = FMath::Clamp(CurrentHealth - Damage, 0.0f, MaximumHealth);
+
 
 	/* Check if the current health has dropped to 0 or below, which would indicate the actor has been defeated or killed.*/
 	if (CurrentHealth <= 0.0f)
@@ -523,7 +536,8 @@ void ACharacterBase::OnTakeDamage(AActor* DamagedActor, float Damage, const UDam
 		/* This is the point where the actor's death is handled. The OnDeath() function is called to execute any logic associated with
 		 the actor's death, such as playing a death animation, removing the actor from the game world, or triggering a game event.*/
 		//CALL OnDeath()
-		
+		OnDeath();
+	
 	}
 
 
